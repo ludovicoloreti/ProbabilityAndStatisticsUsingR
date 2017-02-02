@@ -38,8 +38,6 @@ ggplot(dailyCrimes, aes(x = Hour, y = Day))
         + theme(axis.title.y = element_blank())
 
 
-
-
 tartu_map_g_str <- get_map(location = "chicago", zoom = 11, source = "osm")
 summary(datiChicago$Year)
 
