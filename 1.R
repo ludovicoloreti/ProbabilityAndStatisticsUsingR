@@ -1,8 +1,9 @@
 library(ggplot2)
 library(stringr)
 library(data.table)
+library(ggmap)
 
-datiChicago <- read.csv('~/Documents/EsameStatistica2k17/ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft_final.csv', stringsAsFactors = FALSE)
+datiChicago <- read.csv('~/Desktop/Statistica /ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft_final.csv', stringsAsFactors = FALSE)
 #splitto lat e long usando extract dal pacchetto tidyr - estraggo da datiChicago, colonna Location, e creo due colonne lati e longi
 #http://stackoverflow.com/questions/26383776/how-to-split-r-data-frame-column-based-regular-expression-condition
 # na.amit rimuovo tutti i record con campi vuoti
@@ -33,3 +34,7 @@ dailyCrimes$Day <- factor(dailyCrimes$Day, ordered = TRUE,
 
 #Plotting the number of crimes each day (line graph)
 ggplot(dailyCrimes, aes(x = Hour, y = Day)) + geom_tile(aes(fill = Freq)) + scale_fill_gradient(name = 'Furti totali', low = 'white', high = 'red') + theme(axis.title.y = element_blank())
+
+chicagoMap <- get_map(location = "chicago", zoom = 13, source = "osm")
+
+
