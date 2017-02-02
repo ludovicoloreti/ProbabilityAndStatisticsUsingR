@@ -1,8 +1,9 @@
 library(ggplot2)
 library(stringr)
 library(data.table)
+library(ggmap)
 
-datiChicago <- read.csv('~/Documents/EsameStatistica2k17/ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft_final.csv', stringsAsFactors = FALSE)
+datiChicago <- read.csv('~/Desktop/Statistica /ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft_final.csv', stringsAsFactors = FALSE)
 #splitto lat e long usando extract dal pacchetto tidyr - estraggo da datiChicago, colonna Location, e creo due colonne lati e longi
 #http://stackoverflow.com/questions/26383776/how-to-split-r-data-frame-column-based-regular-expression-condition
 # na.amit rimuovo tutti i record con campi vuoti
@@ -33,3 +34,13 @@ dailyCrimes$Day <- factor(dailyCrimes$Day, ordered = TRUE,
 
 #Plotting the number of crimes each day (line graph)
 ggplot(dailyCrimes, aes(x = Hour, y = Day)) + geom_tile(aes(fill = Freq)) + scale_fill_gradient(name = 'Furti totali', low = 'white', high = 'red') + theme(axis.title.y = element_blank())
+
+
+tartu_map_g_str <- get_map(location = "chicago", zoom = 13)
+# Draw the heat map
+ggmap(tartu_map_g_str, extent = "device") + geom_density2d(data = datiChicago, aes(x = Longitude, y = Latitude), size = 0.3) + 
+  stat_density2d(data = datiChicago, 
+                 aes(x = Longitude, y = Latitude, fill = ..level.., alpha = 0.4), size = 0.01, 
+                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
+  scale_alpha(range = c(0, 0.3), guide = FALSE)
+
