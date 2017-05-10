@@ -9,7 +9,7 @@ data("AirPassengers")
 airp <- AirPassengers
 knitr::kable(airp)
 
-datiChicago <- read.csv('~/Desktop/Statistica /ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft_final.csv', stringsAsFactors = FALSE)
+datiChicago <- read.csv('/Users/ludovicoloreti/Documents/EsameStatistica2k17/ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft_final.csv', stringsAsFactors = FALSE)
 
 
 str(datiChicago)
@@ -63,9 +63,7 @@ ggplot(dailyCrimes, aes(x = Hour, y = Day))
         + theme(axis.title.y = element_blank())
 
 
-<<<<<<< HEAD
 tartu_map_g_str <- get_map(location = "chicago", zoom = 11, source = "osm")
-=======
 
 ChicagoMap <- qmap(location = "chicago", zoom = 10,  legend = "topleft")
 ChicagoMap + geom_point(aes(x = Longitude, y = Latitude, colour = Location.Description, size = Location.Description), data = datiChicago)
@@ -76,8 +74,6 @@ ChicagoMap +
     data = datiChicago
   )
 
-
->>>>>>> e8cddc0fa0f5e6985bde174a9a1b4230f4b752d2
 summary(datiChicago$Year)
 
 

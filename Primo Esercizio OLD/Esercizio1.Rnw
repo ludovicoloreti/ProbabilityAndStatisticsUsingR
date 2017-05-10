@@ -56,7 +56,10 @@ library(stringr)
 library(data.table)
 library(ggmap)
 library(dplyr)
-datiChicago <- read.csv('~/Desktop/Statistica /ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft.csv', 
+# ~/Desktop/Statistica /ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft.csv
+folder <- "/Users/ludovicoloreti/Documents/EsameStatistica2k17/ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft.csv"
+
+datiChicago <- read.csv(folder, 
                         stringsAsFactors = FALSE)
 str(datiChicago)
 
@@ -100,6 +103,7 @@ plot(totPerAnno, ylab = "Tot Annuo", xlab = "Anni",
 
 print(summary(totPerAnno))
 @
+
 Analizzando i dati appena stampanti si nota come ci sia un generale calo dei furti. Il dato che fa sorridere è il picco del 2017. Picco comprensibile in quanto l'anno non è ancora terminato. 
 
 Sarebbe interessante nei paragrafi successivi stimare i furti di veicoli per quest'anno.
@@ -206,7 +210,7 @@ analisiDescr <- function(file, colStart, colEnd){
 dati <- analisiDescr(monthlyByCateg, 2, 13)
 dati
 @
-Dall'analisi dei dati notiamo che i dati sui furti di automobili (come quelli di mezzi pesanti) vriano notevolmente. Studio quindi la presenza di outliers.
+Dall'analisi dei dati notiamo che i dati sui furti di automobili (come quelli di mezzi pesanti) variano notevolmente. Studio quindi la presenza di outliers.
 Piccola osservazione: se vi rubano un mezzo a chicago non sperate di recuperarlo, sciocchi.
 <<>>==
 
