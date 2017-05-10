@@ -1,0 +1,310 @@
+\documentclass{article}
+\usepackage[round,sort]{natbib} % make the in-text citations with a round bracket, and sort by year
+\usepackage{authblk} % allows pretty formatting of author lists
+\usepackage[capitalise]{cleveref}  % when you reference a table or figure, automatically format as "Table 1" rather than "table 1" or "1".
+\title{Esercizio 1 - Analisi dei furti di automobili a Chicago}
+\author[1,2]{Uberto Vittorio Favero}
+\author[1,3]{Ludovico Loreti}
+\affil[1]{Università di Bologna}
+\affil[2]{Statistica Numerica}
+
+\usepackage[italian]{babel} 
+\usepackage[utf8x]{inputenc}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{Sweave}
+
+
+\begin{document}
+
+\maketitle
+
+\section{Introduzione}
+
+In questa relazione esamineremo il file reso disponibile dal portale della città di Chicago dal 2001 inerente i furti di autoveicoli
+così da descrivere il campione di dati, analizzarlo formandone un modello.
+
+Il datasource è liberamente scaricabile a:
+https://data.cityofchicago.org/Public-Safety/Crimes-2001-to-present/ijzp-q8t2
+
+Ed è composto da:
+
+\begin{itemize}
+\item Data e ora di rilievo del reato
+\item Indirizzo
+\item Tipologia di reato
+\item Descrizione del tipo di veicolo
+\item Descrizione del luogo del furto (Strada, parcheggio privato, supermercato etc)
+\item Ward, ovvero il distretto di polizia di riferimento
+\item Community Area, ovvero il quartiere
+\item Anno
+\item Latitudine e longutudine
+\end{itemize}
+\texttt{kruskal.test} help page into a \LaTeX{} document:
+
+\newpage
+
+\section{Preparazione dei dati}
+
+Il dati sono disponibili per il download in un file .csv di circa 200k record.
+
+Innanzitutto valuto il file con la funzione scan per comprenderene la conformazione:
+
+<<>>=
+library(ggplot2)
+library(stringr)
+library(data.table)
+library(ggmap)
+library(dplyr)
+datiChicago <- read.csv('~/Desktop/Statistica /ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft.csv', 
+                        stringsAsFactors = FALSE)
+str(datiChicago)
+
+@
+ 
+Ora che ne ho verificato la conformazione posso passare alla valutazione di eventuali dati mancanti
+<<>>==
+
+
+
+@
+% \begin{center}
+% <<fig=TRUE,echo=TRUE>>=
+% boxplot(Ozone ~ Month, data = airquality)
+% @
+% \end{center}
+
+
+
+\section{ Analisi quantitativa dei dati}
+
+Al fine di fare un'analisi quantitativa dei dati, decido di guardare in generale l'andamento dei furti in Chicago per anno.
+Quindi appoggiandomi al pacchetto \texttt{dplyr} raggruppo il file per anno e calcolo i totali:
+
+<<>>=
+totAnnuo <- group_by(datiChicago, Year, Description)
+
+totsPerCateg <- summarize(totAnnuo,count=n())
+
+str(totsPerCateg)
+#aggrego il dataframe precedente per anno sommandone le categorie - 
+totPerAnno <- aggregate(totsPerCateg$count, by = list(Year=totsPerCateg$Year), FUN = sum)
+
+#rinomino colonna 
+names(totPerAnno)[names(totPerAnno) == 'x'] <- 'Totale.annuo'
+
+# xlab - ylab = labels. type = b both (linee e punti)
+
+plot(totPerAnno, ylab = "Tot Annuo", xlab = "Anni", 
+     main = "Furti totali di veicoli a Chicago dal 2001 a oggi ", type = 'b')
+
+print(summary(totPerAnno))
+@
+Analizzando i dati appena stampanti si nota come ci sia un generale calo dei furti. Il dato che fa sorridere è il picco del 2017. Picco comprensibile in quanto l'anno non è ancora terminato. 
+
+Sarebbe interessante nei paragrafi successivi stimare i furti di veicoli per quest'anno.
+
+A questo punto il 2017 lo tratto come un outlier e per ora non lo prendo in considerazione, aggiornando i dataset rimuovendo i dati inerenti il 2017, e ricalcolo il \texttt{summary}, visualizzando anche meduana, massimo e minimo
+<<>>==
+totsPerCateg <- totsPerCateg[!(totsPerCateg$Year == '2017'),]
+totPerAnno <- totPerAnno[!(totPerAnno$Year == '2017'),]
+
+knitr::kable(totPerAnno)
+
+plot(totPerAnno, ylab = "Tot Annuo", xlab = "Anni", 
+     main = "Furti totali di veicoli a Chicago dal 2001 a oggi ", type = 'b')
+
+
+@
+Ora, per studiare i dati in maniera più consona, calcolo le somme mensili per ogni tipologia di furto.
+Ma per fare questo per evitare errori sui formati di data, converto la colonna \texttt{Date} secondo lo standard POSIXct - mentre ora sono salvati in POSIXlt.
+Successivamente creo una tabella con le righe contenenti sulla prima colonna una sequenza di numeri dal 2001 al 2017 ordinati in maniera crescente divisi separati da un intervallo di 1/12 e calcolo per ogni mese i totali per ciascuno delle tipologie di furto indicate.
+Per terminare salvo il csv così da poterlo riusare successivamente
+<<>>==
+datiChicago$Date <- as.POSIXct(datiChicago$Date, format="%Y%m%d %H%M%S")
+
+#creo una tabell avuota dove la prima colonna sono gli anni dal 2006 a oggi in forma numerica 2006, 2006.08333-...
+monthlyByCateg <- data.frame(Months =seq(as.Date("2001-01-01"), 
+                                         as.Date("2017-01-01"), by="months" ))
+
+
+#monthlyByCateg <- data.frame(Months = seq(from = 2001, to = 2017, by= 1/12 ))
+descrizioni <- as.character(unique(unlist(datiChicago$Description)))
+#genero la matrice con dati vuoti
+monthlyByCateg[,descrizioni] <-NA
+
+anno = 2001
+mese = 1
+rowsTot = nrow(monthlyByCateg)
+categTot <- length(descrizioni)
+#descrizionhe vale come indice colonna per la matrice monthlyByCateg
+
+for(riga in 1: rowsTot){
+    #so fare due nested for, ma mi serviva così. ci mette 3 minuti buoni a calcolare tutto
+    monthlyByCateg[riga, 2]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[1] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 3]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[2] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 4]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[3] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 5]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[4] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 6]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[5] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 7]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[6] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 8]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[7] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 9]  <- summarize(subset(datiChicago, Year == anno 
+                                                 & Description == descrizioni[8] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 10]  <- summarize(subset(datiChicago, Year == anno
+                                                  & Description == descrizioni[9] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 11]  <- summarize(subset(datiChicago, Year == anno 
+                                                  & Description == descrizioni[10] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 12]  <- summarize(subset(datiChicago, Year == anno 
+                                                  & Description == descrizioni[11] & month(Date) == mese ),count = n())
+    monthlyByCateg[riga, 13]  <- summarize(subset(datiChicago, Year == anno 
+                                                  & Description == descrizioni[12] & month(Date) == mese ),count = n())
+    mese = mese+1
+    if(riga %% 12 == 0){
+      anno = anno +1
+      mese = 1
+    } 
+     
+}
+
+write.csv(monthlyByCateg, file = "monthlyByCateg.csv")
+#rinomino colonna
+names(monthlyByCateg)[names(monthlyByCateg) == 'Months'] <- 'time'
+
+knitr::kable(summary(monthlyByCateg))
+
+@
+A questo punto posso creare una funzione che mi gestisce le varie colonne e mi stampa un summary
+
+
+
+
+<<>>==
+
+plot(rolldie(10, makespace = TRUE))
+
+analisiDescr <- function(file, colStart, colEnd){
+  dataset <- file[,colStart:colEnd]
+  dim <- length(dataset)
+  #2 significa colonne, #1 righe
+  media <- apply(dataset, 2 , mean, na.rm = TRUE)
+  varianza <-apply(dataset, 2,var, na.rm = TRUE)
+  devStd <- sqrt(varianza)
+  minimo <- apply(dataset, 2, min, na.rm = TRUE)
+  massimo <- apply(dataset, 2, max, na.rm = TRUE)
+  Desc <- data.frame(media, varianza, devStd, minimo, massimo)
+  colnames <- c("media", "varianza", "devStd", "minimo", "massimo")
+  return(Desc)
+}
+
+dati <- analisiDescr(monthlyByCateg, 2, 13)
+dati
+@
+Dall'analisi dei dati notiamo che i dati sui furti di automobili (come quelli di mezzi pesanti) vriano notevolmente. Studio quindi la presenza di outliers.
+Piccola osservazione: se vi rubano un mezzo a chicago non sperate di recuperarlo, sciocchi.
+<<>>==
+
+furti <- boxplot(x= as.list(monthlyByCateg[,2:13]))
+@
+
+Come si evince dal grafico ci sono degli outliers potenziali sopratutto nei grafici 1, 2, 4 e 6 che, mi accingo a rimuovere tramite identify, che fornisce la possiiblità di intervenire direttamente col mouse sul grafico.
+<<>>==
+furtiAuto <- boxplot(x= monthlyByCateg$AUTOMOBILE)
+
+darimuovere <- identify(rep(3, length(monthlyByCateg[,2]))+ monthlyByCateg[2])
+boxplot( totPerAnno$Totale.annuo)
+
+@
+Sarò sincero... la funzione "identify" mi ha sempre risposto \texttt{warning: no point within 0.25 inches} nonostante cliccassi correttamente sul punto outlier segnalato, al che ho proceduto alla rimozione manuale dell'outlier, corrispondente alla misurazione su Ottobre 2001.
+
+Ora studiamo i file come time-series. Il formato TimeSerie permette tutta una serie di analisi sul trend e sulle previsioni grazie alle funzionalità built-in di R. Pertanto converto il dataset tramite la funzione in una serie temporale che ha una ciclicità di 12 mesi.
+Successivamente applico la funzione decompose che mi permette di studiare la serie temporale stessa.
+<<>>==
+timeSerie <- ts(select(monthlyByCateg, AUTOMOBILE), frequency = 12, start = c(2001,1) )
+timeSerieDec <- decompose(timeSerie, type = "multiplicative")
+plot(timeSerieDec)
+@
+
+Questo grafico, tramite l'analisi di una serie temporale (\texttt{timeserie}) mostra:
+
+\begin{itemize}
+\item Andamento dell'osservazione
+\item Il trend, che abbastanza assimilabile a un processo lineare
+\item Stagionalità. Come vediamo c'è una certa ripetitività nel fenomeno e quindi sì, il fenomeno è stagionale (o meglio, nel grafico è annuale)
+\item Random, ovvero la stima dei dati che non seguono l'andamento (componenti irregolari)
+\end{itemize}
+
+Da una timeserie e il relativo andamento risulta abbastanza ageovole lavorare sulle stime per la creazione di un modello
+Utilizzando una previsione di Holt, 
+<<>>==
+
+serieFurti <- HoltWinters(timeSerie, beta = FALSE, gamma = FALSE)
+serieFurti$fitted
+plot(serieFurti)
+
+require(forecast)
+
+serieFurti2 <- forecast::forecast.HoltWinters(serieFurti, h = 8)
+plot(serieFurti2, main = "Previsione furti Veicoli per il 2017")
+
+acf(serieFurti2$residuals, lag.max = 20)
+@
+La stima di \texttt{ Holt, (1957)} ci permette di prevedere l'andamento del fenomeno preso in esame utilizzando 3 equazioni:
+
+Una equazione per la previsione: $$\hat{y}_{t+h|t} = l_{t} + hb_{t}$$
+Una equazione di smoothing per il livello: $$ l_{t} = \alpha y_{t} + (1 - \alpha)(l_{t-1} + b_{t-1}) $$
+Una equazione di smoothing per il trend: $$ b_{t} = \beta^*(l_{t} - l_{t-1}) + (1 + \beta^*)b_{t-1} $$
+
+dove $\l_{t}$ demota uno stimatore per il livello della serie al momento t. $\b_{t}$ denota invece una stima della pendenza del trend della serie temporale al tempo $\t$. \alpha è invece il parametro di smoothing per il livello della serie.
+
+
+
+
+\section{Analisi delle distribuzioni}
+
+Analizzo la correlazione
+<<>>==
+corr 
+@
+La mia analisi ora vuole spostarsi sui giorni  (e le relative ore) al fine di valutare tramite un grafico heat, quali siano le ore più rischiose.
+
+<<>>==
+
+par(mfrow = c(2,2))
+
+y <- c("Fn(Auto)", "Fn(RD)", "Fn(ROE)")
+x <- c("Auto", "Ritrovamenti", "ROE")
+
+plot(ecdf(monthlyByCateg[,2]), main = "Auto", xlab = x[1], ylab = y[1])
+plot(ecdf(monthlyByCateg[,3]), main = "Attempted auto", xlab = x[1], ylab = y[1])
+plot(ecdf(monthlyByCateg[,5]), main = "Recovered Auto", xlab = x[1], ylab = y[1])
+
+
+prova <- filter(tots, Description ==   "ATT: AUTOMOBILE", Year == '2001')
+#tipologie di descrizione
+n_distinct(tots$Description)
+tots.transposed <- t(tots[,3])
+
+
+boxplot(filter(tots,tots$Year == 2005))
+qplot(data = tots, x = Year, y = count, )
+
+
+@
+Noto immediatamente che il 2017 ha solo 910 furti. Chiaramente essendo il 2017 iniziato da poco, questo valore è da trattare adeguatamente per non sfalsare la nostra analisi.
+
+Ora risulterebbe più interessante accoppiare il totale di ogni anno con le tipologie di furto (colonna \texttt{Description})
+<<>>=
+
+
+@
+
+
+\end{document}
+

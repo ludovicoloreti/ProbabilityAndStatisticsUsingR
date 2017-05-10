@@ -18,3 +18,28 @@ for(i in 1:72) {
   }
   j = j+1
 }
+
+asd <- c(72,55,79,63,64)
+
+plot(asd)
+summary(asd)
+
+1/5*((72-66.6)^2+(55-66.6)^2+(79-66.6)^2+(63-66.6)^2+(64-66.6)^2)
+
+(sqrt(67.44)/66.6)*100
+
+analisiDescr <- function(file, colStart, colEnd){
+  dataset <- file[,colStart:colEnd]
+  dim <- length(dataset)
+  #2 significa colonne
+  media <- apply(dataset, 2 , mean, na.rm = TRUE)
+  varianza <-apply(dataset, 2,var, na.rm = TRUE)
+  devStd <- sqrt(varianza)
+  minimo <- apply(dataset, 2, min, na.rm = TRUE)
+  massimo <- apply(dataset, 2, max, na.rm = TRUE)
+  Desc <- data.frame(media, varianza, devStd, minimo, massimo)
+  colnames <- c("media", "varianza", "devStd", "minimo", "massimo")
+  return(Desc)
+}
+
+dati <- analisiDescr(monthlyByCateg, 1, 13)
