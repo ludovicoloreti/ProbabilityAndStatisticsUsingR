@@ -2,8 +2,33 @@ library(ggplot2)
 library(stringr)
 library(data.table)
 library(ggmap)
+library(dplyr)
+
+
+data("AirPassengers")
+airp <- AirPassengers
+knitr::kable(airp)
 
 datiChicago <- read.csv('~/Desktop/Statistica /ProbabilityAndStatisticsUsingR/dataset/motor_vehicle_theft_final.csv', stringsAsFactors = FALSE)
+
+
+str(datiChicago)
+
+#https://www.r-bloggers.com/dplyr-example-1/
+
+
+
+byMonSex <- group_by(datiChicago, Year,Description)
+asd <- ( sumMonSex <- summarize(byMonSex,count=n()))
+plot(asd)
+summary(asd)
+
+
+
+reverseYear <- function(data){
+  
+}
+
 #splitto lat e long usando extract dal pacchetto tidyr - estraggo da datiChicago, colonna Location, e creo due colonne lati e longi
 #http://stackoverflow.com/questions/26383776/how-to-split-r-data-frame-column-based-regular-expression-condition
 # na.amit rimuovo tutti i record con campi vuoti
@@ -38,17 +63,31 @@ ggplot(dailyCrimes, aes(x = Hour, y = Day))
         + theme(axis.title.y = element_blank())
 
 
+<<<<<<< HEAD
 tartu_map_g_str <- get_map(location = "chicago", zoom = 11, source = "osm")
+=======
+
+ChicagoMap <- qmap(location = "chicago", zoom = 10,  legend = "topleft")
+ChicagoMap + geom_point(aes(x = Longitude, y = Latitude, colour = Location.Description, size = Location.Description), data = datiChicago)
+ChicagoMap +
+  stat_bin_2d(
+    aes(x = Longitude, y = Latitude, colour = Location.Description, fill = Location.Description),
+    size = .5, bins = 30, alpha = 0.4,   
+    data = datiChicago
+  )
+
+
+>>>>>>> e8cddc0fa0f5e6985bde174a9a1b4230f4b752d2
 summary(datiChicago$Year)
 
-anno = 2001
 
 for(anno in 2001:2016){
-  
+  dataAnno = subset(datiChicago, Year = anno)
+  print(anno)
 }
-ggmap(tartu_map_g_str, extent = "device") + geom_density2d(data = datiChicago, aes(x = Longitude, y = Latitude), size = 0.3) + 
+ggmap(ChicagoMap, extent = "device") + geom_density2d(data = datiChicago, aes(x = Longitude, y = Latitude), size = 0.1) + 
   stat_density2d(data = datiChicago, 
                 aes(x = Longitude, y = Latitude, fill = ..level.., alpha = 0.4), size = 0.01, 
                 bins = 16, geom = "polygon") + scale_fill_gradient(low = "green", high = "red") + 
-                scale_alpha(range = c(0, 0.3), guide = FALSE)
+                scale_alpha(range = c(0, 0.1), guide = FALSE)
 
