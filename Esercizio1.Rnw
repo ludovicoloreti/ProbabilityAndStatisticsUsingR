@@ -122,7 +122,7 @@ Successivamente creo una tabella con le righe contenenti sulla prima colonna una
 Per terminare salvo il csv così da poterlo riusare successivamente
 <<>>==
 Sys.setenv(TZ='America/Sao_Paulo')
-
+#tz = timezone
 datiChicago$Date <- as.POSIXct(datiChicago$Date, tz="GMT", format="%m/%d/%Y %I:%M:%S %p")
 #creo una tabella vuota dove la prima colonna sono gli anni dal 2006 a oggi in forma numerica 2006, 2006.08333-...
 monthlyByCateg <- data.frame(Months =seq(as.Date("2001-01-01"), 
@@ -216,9 +216,95 @@ furtiAuto <- boxplot(x= monthlyByCateg$AUTOMOBILE)
 
 darimuovere <- identify(rep(3, length(monthlyByCateg[,2]))+ monthlyByCateg[2])
 boxplot( totPerAnno$Totale.annuo)
+furtiAuto <- boxplot(x= monthlyByCateg$AUTOMOBILE)
 
 @
 Sarò sincero... la funzione "identify" mi ha sempre risposto \texttt{warning: no point within 0.25 inches} nonostante cliccassi correttamente sul punto outlier segnalato, al che ho proceduto alla rimozione manuale dell'outlier, corrispondente alla misurazione su Ottobre 2001.
+
+Al che rimuoviamo gli outliers con la seguente funzione:
+<<>>==
+outlierDetector(monthlyByCateg, AUTOMOBILE )
+outlierDetector(monthlyByCateg, `TRUCK, BUS, MOTOR HOME`)
+outlierDetector(monthlyByCateg, monthlyByCateg$`CYCLE, SCOOTER, BIKE W-VIN`)
+
+#rimuovo gli OUTLIERS rimossi
+
+monthlyByCateg <- na.omit(monthlyByCateg)
+
+
+@
+
+
+Avendo rimosso gli outlier possiamo iniziare a studiare le distribuzioni sui furti di veicoli e sui recovery.
+
+<<>>==
+
+#Automobili, Truck bus e Cycle
+
+miofile <- "~/Desktop/UNIBO/Statistica /1_2017/dataset/bellaRaga.Rdata"
+save(monthlyByCateg, file=miofile)
+
+descrFurti <- analisiDescr(monthlyByCateg, 2,13)
+descrFurti
+
+require(ggplot2)
+require(gridExtra)
+
+yAxisFurti <- "Frequenza"
+xAxisFurti <- "Numero furti"
+
+g0 <- ggplot(monthlyByCateg)
+fillColor <- "black"
+
+g1 <- g0 + geom_histogram(aes(x = AUTOMOBILE), binwidth = 40, fill= "black")
+summary(monthlyByCateg$AUTOMOBILE)
+g1 <- g1 + ggtitle("AUTOMOBILE") + ylab(yAxisFurti) + xlab(xAxisFurti)
+
+g2 <- g0 + geom_histogram(aes(x = `TRUCK, BUS, MOTOR HOME`), binwidth = 3, fill= "red")
+g2 <- g2 + ggtitle("TRUCK, BUS, MOTOR HOME") + ylab(yAxisFurti) + xlab(xAxisFurti)
+summary(monthlyByCateg$`TRUCK, BUS, MOTOR HOME`)
+
+g3 <- g0 + geom_histogram(aes(x = `CYCLE, SCOOTER, BIKE W-VIN`), binwidth = 0.9, fill= "blue")
+g3 <- g3 + ggtitle("CYCLE, SCOOTER, BIKE W-VIN") + ylab(yAxisFurti) + xlab(xAxisFurti)
+summary(monthlyByCateg$`CYCLE, SCOOTER, BIKE W-VIN`)
+
+#https://stats.stackexchange.com/questions/58220/what-distribution-does-my-data-follow
+grid.arrange(g1, g2, g3, ncol = 3)
+@
+Ora studiamo le distribuizioni di densità per furti di Automobili, campers - camion e veicoli a due ruote
+
+
+<<>>==
+
+
+require('gridExtra')
+
+gD <- ggplot(monthlyByCateg);
+#grafico densità auto
+gdA <- gD + geom_density(aes(x = AUTOMOBILE), fill = 'green', col = 'green') + ggtitle("Automobili") + xlab("Automobili") + ylab("densità")
+#grafico Densità Truck
+gdT <- gD + geom_density(aes(x = `TRUCK, BUS, MOTOR HOME`), fill = 'yellow', col = 'yellow') + ggtitle("Truck, bus, motorhome") + xlab("n. Truck") + ylab("densità")
+gdB <- gD + geom_density(aes(x = `CYCLE, SCOOTER, BIKE W-VIN`), fill = 'blue', col = 'blue') + ggtitle("Bici") + xlab("Due ruote") + ylab("densità")
+
+grid.arrange(gdA, gdT, gdB, ncol = 1)
+
+
+hist(dpois(monthlyByCateg$AUTOMOBILE, dati[1,1]))
+
+
+
+a <- rbeta(1000, 1, 200, ncp = 0)
+
+plot(a)
+
+
+plot(density(monthlyByCateg$`CYCLE, SCOOTER, BIKE W-VIN`), breaks = 30)
+descdist(a, boot=500)
+@
+
+
+
+
 
 Ora studiamo i file come time-series. Il formato TimeSerie permette tutta una serie di analisi sul trend e sulle previsioni grazie alle funzionalità built-in di R. Pertanto converto il dataset tramite la funzione in una serie temporale che ha una ciclicità di 12 mesi.
 Successivamente applico la funzione decompose che mi permette di studiare la serie temporale stessa.
@@ -294,9 +380,22 @@ qplot(data = tots, x = Year, y = count, )
 Noto immediatamente che il 2017 ha solo 910 furti. Chiaramente essendo il 2017 iniziato da poco, questo valore è da trattare adeguatamente per non sfalsare la nostra analisi.
 
 Ora risulterebbe più interessante accoppiare il totale di ogni anno con le tipologie di furto (colonna \texttt{Description})
+
+Cazzata. Ci conviene fare l'analisi di regressione lineare.
 <<>>=
 
+plot(totPerAnno)
+summary(totPerAnno$Totale.annuo)
+regr_furti = lm(totPerAnno$Totale.annuo~totPerAnno$Year, data=totPerAnno)
+coefRetta <- coef(regr_furti)
+#we love triangolini
+plot(totPerAnno$Totale.annuo~totPerAnno$Year, data=totPerAnno, pch=2)
+abline(coefRetta)
 
+fitted(regr_furti)
+asd <- predict(regr_furti, newdata=totPerAnno)
+totAuto <- 2168054 - (1070*2018)
+totAuto
 @
 
 
